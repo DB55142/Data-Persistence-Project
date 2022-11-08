@@ -4,6 +4,8 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using System.IO;
+using TMPro;
 
 public class MainManager : MonoBehaviour
 {
@@ -19,6 +21,13 @@ public class MainManager : MonoBehaviour
     
     private bool m_GameOver = false;
 
+    private string name;
+
+    public Text UserName;
+
+    public Text highScore;
+    private int prevHighScore;
+    private string prevHighScoreUser;
     
     // Start is called before the first frame update
     void Start()
@@ -37,6 +46,9 @@ public class MainManager : MonoBehaviour
                 brick.onDestroyed.AddListener(AddPoint);
             }
         }
+
+        GetName();
+        DisplayName();
     }
 
     private void Update()
@@ -66,6 +78,10 @@ public class MainManager : MonoBehaviour
         {
             ExitGame();
         }
+
+        DisplayUserName();
+        DisplayHighScore();
+        GetHighScore();
     }
 
     void AddPoint(int point)
@@ -74,11 +90,89 @@ public class MainManager : MonoBehaviour
         ScoreText.text = $"Score : {m_Points}";
     }
 
+    public void GetName()
+    {
+        //plugging desired file path
+        string path = Application.persistentDataPath + "/savefile.json";
+
+        //if the file exists
+        if (File.Exists(path))
+        {
+            //reading in all text from the specified JSON file
+            string json = File.ReadAllText(path);
+
+            //creating an object of the "SaveData" class from the StartMenu script to hold the class data from the JSON file
+            StartMenu.SaveData data = JsonUtility.FromJson<StartMenu.SaveData>(json);
+
+            //setting value of the variable from the JSON file as the value to a local variable
+            name = data.name;
+        }
+    }
+
+    public void GetHighScore()
+    {
+        string path = Application.persistentDataPath + "/highscore.json";
+
+        if (File.Exists(path))
+        {
+            string json = File.ReadAllText(path);
+
+            HighScoreSaveData hSData = JsonUtility.FromJson<HighScoreSaveData>(json);
+
+            prevHighScore = hSData.points;
+            prevHighScoreUser = hSData.name;
+        }
+
+        else
+        {
+            Debug.Log("file isn't there");
+        }
+    }
+
+    private void DisplayUserName()
+    {
+        UserName.text = "User: " + name;
+    }
+
+    private void DisplayHighScore()
+    {
+        highScore.text = "High Score from " + prevHighScoreUser + ": " + prevHighScore;
+    }
+
+    public void DisplayName()
+    {
+        Debug.Log(name);
+    }
     public void GameOver()
     {
         m_GameOver = true;
         GameOverText.SetActive(true);
+        UpdateHighScore();
     }
+
+    public class HighScoreSaveData
+    {
+        public string name;
+        public int points;
+    }
+
+
+    public void UpdateHighScore()
+    {
+        if (m_Points > prevHighScore)
+        {
+            HighScoreSaveData hSData = new HighScoreSaveData();
+
+            hSData.name = name;
+            hSData.points = m_Points;
+
+            string json = JsonUtility.ToJson(hSData);
+
+            File.WriteAllText(Application.persistentDataPath + "/highscore.json", json);
+            Debug.Log(hSData.points);
+        }
+    }
+
 
     public void ExitGame()
     {
